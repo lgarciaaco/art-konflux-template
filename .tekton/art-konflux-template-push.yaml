@@ -106,6 +106,18 @@ spec:
       description: List of platforms to build the container images on. The available set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
       type: array
+    - default: 'false'
+      description: Enable Enterprise Contract validation
+      name: conforma-enabled
+      type: string
+    - default: 'production'
+      description: Policy environment (production/staging)
+      name: conforma-policy-env
+      type: string
+    - default: ''
+      description: Effective time for policy evaluation (ISO 8601)
+      name: conforma-effective-time
+      type: string
     results:
     - description: ''
       name: IMAGE_URL
@@ -514,6 +526,34 @@ spec:
           value: task
         resolver: bundles
       when:
+      - input: $(params.skip-checks)
+        operator: in
+        values:
+        - 'false'
+    - name: verify-enterprise-contract
+      params:
+      - name: IMAGES
+        value: $(tasks.build-image-index.results.IMAGE_URL)@$(tasks.build-image-index.results.IMAGE_DIGEST)
+      - name: POLICY_CONFIGURATION
+        value: $(params.conforma-policy-env)
+      - name: EFFECTIVE_TIME
+        value: $(params.conforma-effective-time)
+      runAfter:
+      - build-image-index
+      taskRef:
+        params:
+        - name: name
+          value: verify-enterprise-contract
+        - name: bundle
+          value: quay.io/konflux-ci/tekton-catalog/task-verify-enterprise-contract:0.1@sha256:7b02fdc319906c431530fa24612ad727949f6ad8548a3ab25248b049ddd87e01
+        - name: kind
+          value: task
+        resolver: bundles
+      when:
+      - input: $(params.conforma-enabled)
+        operator: in
+        values:
+        - 'true'
       - input: $(params.skip-checks)
         operator: in
         values:
